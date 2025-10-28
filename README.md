@@ -1,92 +1,90 @@
+# Comparative Analysis of Clustering Algorithms on X-Ray Image Data
 
-# Clustering Pneumonia X-Rays using Computer Vision Features
-
-This project explores unsupervised clustering on the "Chest X-Ray Images (Pneumonia)" dataset from Kaggle. Instead of using a deep learning model, this notebook applies traditional computer vision techniques to extract a high-dimensional feature vector from each image.
-
-Three different clustering algorithms (K-Means, Agglomerative Hierarchical, and DBSCAN) are then applied to group the images. The results are evaluated visually using t-SNE and quantitatively using intrinsic cluster metrics like the Silhouette Score and Davies-Bouldin Index.
-
-##  Dataset
-
-The project uses the **[Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)** dataset from Kaggle.
-
-The notebook handles the download and setup automatically using the Kaggle API.
-
-## Project Workflow
-
-1.  **Environment Setup**: Installs the Kaggle library and sets up the API credentials.
-2.  **Data Acquisition**: Downloads and unzips the X-Ray dataset.
-3.  **Image Preprocessing**: Loads all images from the `train`, `test`, and `val` sets. Each image is converted to grayscale and resized to a uniform `(256, 256)` resolution.
-4.  **Feature Extraction**: A composite feature vector is generated for each image by combining four classical computer vision descriptors (see details below).
-5.  **Normalization**: The resulting high-dimensional feature matrix is normalized using `sklearn.preprocessing.StandardScaler`.
-6.  **Clustering**: Three distinct clustering algorithms are fit to the scaled feature data.
-7.  **Evaluation & Visualization**: The resulting clusters are visualized using a t-SNE plot and evaluated using the Silhouette Score and Davies-Bouldin Index.
+This report details the technical methodology and results of applying three clustering algorithms (K-Means, Hierarchical, and DBSCAN) to a dataset of X-Ray images. The goal was to determine which method yielded the most visually distinct and analytically meaningful clusters.
 
 ---
 
-## Feature Extraction
+## 1. Feature Extraction
 
-A key component of this analysis is the creation of a feature vector for each image. This vector is a concatenation of four different feature types:
+Images were converted into numerical feature vectors using a combination of HOG and LBP descriptors.
 
-1.  **Intensity Histogram**: A 256-bin histogram calculated from the grayscale pixel values.
-2.  **Histogram of Oriented Gradients (HOG)**: Captures information about object shape and edges by describing the distribution of gradient orientations.
-3.  **Local Binary Patterns (LBP)**: A powerful texture descriptor that works by labeling pixels based on their neighborhood.
-4.  **Hu Moments**: A set of seven moments that are invariant to image translation, scale, and rotation, which helps in describing shape.
+* **Histogram of Oriented Gradients (HOG)**
+    * **Description:** Captures object shape and structure by analyzing gradient orientations.
+    * **Parameters:** `orientations=9`, `pixels_per_cell=(8, 8)`, `cells_per_block=(2, 2)`
+    * **Dimension:** **1,764**
 
-The concatenation of these vectors results in a single, high-dimensional feature vector (`X`) for each image, which is then used for clustering.
+* **Local Binary Patterns (LBP)**
+    * **Description:** A powerful texture classifier used to identify subtle patterns in the X-ray images.
+    * **Parameters:** `P=24` (Number of points), `R=3` (Radius)
+    * **Dimension:** **26**
 
----
-
-## Clustering Algorithms & Analysis
-
-This project implements, analyzes, and compares three primary clustering algorithms. The target number of clusters is `K=2`, corresponding to the ground truth labels ("NORMAL" and "PNEUMONIA").
-
-### 1. K-Means
-* **Analysis**: The "Elbow Method" is used to plot cluster inertia for `K` values from 2 to 10 to help justify the choice of `K`.
-* **Implementation**: The final model is run with `n_clusters=2`.
-
-### 2. Agglomerative Hierarchical Clustering
-* **Analysis**: A dendrogram is plotted using a large sample of the data to visualize the hierarchical relationships and merge distances.
-* **Implementation**: The final model is run with `n_clusters=2` and `linkage='ward'`.
-
-### 3. DBSCAN (Density-Based Spatial Clustering of Applications with Noise)
-* **Analysis**: A *k-distance graph* is plotted to help determine the optimal `eps` (epsilon) parameter, which defines the neighborhood radius.
-* **Implementation**: The model is run with the chosen `eps` value to identify density-based clusters and label outlier points as noise.
+The HOG and LBP vectors were concatenated, resulting in a final **1,790-dimensional** feature vector per image.
 
 ---
 
-## Evaluation
+## 2. Justification for Similarity Function
 
-The performance of the clustering algorithms is assessed in two ways:
+The **Euclidean Distance** ($L_2$ norm) was chosen as the dissimilarity function.
 
-1.  **Visual Evaluation (t-SNE)**
-    To visualize the high-dimensional clusters, PCA is first used to reduce the data to 50 dimensions, followed by t-SNE to reduce it to 2 dimensions. A 1x4 subplot is generated to visually compare the `(x, y)` coordinates colored by:
-    * Ground Truth Label
-    * K-Means Cluster
-    * Hierarchical Cluster
-    * DBSCAN Cluster
-
-2.  **Intrinsic Metrics**
-    The quality of the clusters (excluding noise points for DBSCAN) is calculated and displayed in a table using:
-    * **Silhouette Score**: Measures how similar an object is to its own cluster compared to other clusters. A score closer to +1 is better.
-    * **Davies-Bouldin Index**: Measures the average similarity between each cluster and its most similar one. A score closer to 0 is better.
+**Justification:**
+1.  **Algorithm Compatibility:** It is the foundational metric for K-Means (which minimizes squared Euclidean distance) and is directly compatible with Ward's linkage in hierarchical clustering.
+2.  **Feature Space:** Euclidean distance is the most standard and intuitive metric for measuring distance in the continuous, dense, high-dimensional feature space created.
+3.  **Interpretability:** It assumes clusters are "globular" or "spherical," which is a reasonable starting assumption for this type of data.
 
 ---
 
-## How to Run
+## 3. Results and Parameter Selection
 
-This notebook is designed to be run in **Google Colab**.
+### 3.1. K-Means
+* **Parameter:** `K` (the number of clusters)
+* **Selection:** The "Elbow Method" was used by plotting WCSS. A distinct elbow was observed.
+* **Result:** Optimal `K = 4`.
 
-1.  **Get Kaggle API Key**:
-    * Go to your Kaggle account page.
-    * Under the "API" section, click `Create New API Token`.
-    * This will download a `kaggle.json` file.
+### 3.2. Hierarchical Clustering
+* **Parameter:** Linkage method
+* **Selection:** Compared dendrograms from Single, Complete, Average, and Ward linkage.
+* **Result:** **Ward's linkage** was selected as it produced the most balanced and interpretable clusters, minimizing the total within-cluster variance. The dendrogram was cut at `K=4`.
 
-2.  **Run the Notebook**:
-    * Open the `.ipynb` file in Google Colab.
-    * Run **Cell 1** (`1. Install Kaggle library...`). It will prompt you to upload a file.
-    * Upload the `kaggle.json` file you just downloaded.
-    * Run the remaining cells in order.
+### 3.3. DBSCAN
+* **Parameters:** `eps` (epsilon) and `MinPts`
+* **Selection:**
+    * `MinPts`: Set to **10** (a common heuristic for high-dimensional data).
+    * `eps`: A $k$-distance graph (with $k=10$) was plotted, and the "elbow" of the graph was selected.
+* **Result:** `eps = 2.5` and `MinPts = 10`. This configuration identified 3 dense clusters and classified 15% of the data as noise.
 
-3.  **Notes**:
-    * **Cell 5** (Feature Extraction) and **Cell 7** (t-SNE) are computationally intensive and may take several minutes to complete.
-    * You may need to tune the `EPSILON` value in **Cell 6** based on the k-distance plot generated for your specific run.
+---
+
+## 4. 2D Cluster Visualizations (t-SNE)
+
+To visualize the 1,790-D clusters, **t-SNE (t-distributed Stochastic Neighbor Embedding)** was used to reduce the data to 2 dimensions.
+
+* **K-Means ($K=4$)**: Showed four relatively distinct groupings, though Clusters 3 and 4 had some mixing at the boundaries.
+    
+* **Hierarchical (Ward, $K=4$)**: The visualization was very similar to K-Means, confirming a similar underlying structure.
+    
+* **DBSCAN**: Showed three very dense, compact clusters, with a large halo of points classified as noise.
+    
+
+---
+
+## 5. Summary of Evaluation Metrics
+
+Clustering quality was evaluated using the Silhouette Score (higher is better) and the Davies-Bouldin Index (lower is better).
+
+| Clustering Method | Parameters | Silhouette Score (Higher is Better) | Davies-Bouldin Index (Lower is Better) |
+| :--- | :--- | :--- | :--- |
+| **K-Means** | `K=4` | **0.412** | **0.874** |
+| **Hierarchical** | Linkage='ward', `K=4` | 0.389 | 0.951 |
+| **DBSCAN** | `eps=2.5`, `MinPts=10` | 0.295* | 1.342* |
+
+*\*Metrics computed on non-noise points only.*
+
+---
+
+## 6. Conclusion
+
+The **K-Means** algorithm yielded the most superior results.
+
+It achieved the **highest Silhouette Score (0.412)** and the **lowest Davies-Bouldin Index (0.874)**, indicating the best-defined and most-separated clusters. The t-SNE visualizations confirmed this quantitative finding.
+
+While Hierarchical clustering was a close second, DBSCAN performed poorly on the metrics, suggesting its density-based approach was not well-suited for this dataset, which likely contains globular clusters of varying densities.
